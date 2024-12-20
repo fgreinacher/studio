@@ -5,25 +5,27 @@ import { show } from '@ebay/nice-modal-react';
 
 import { ConvertToLatestModal } from '../components/Modals';
 
-import { documentsState } from '../state';
+import { documentsState, settingsState } from '@/state';
 
 import type { SpecVersions } from '../types';
 
 export class SpecificationService extends AbstractService {
+  private keySessionStorage = 'informed-about-latest';
   override onInit() {
     this.subcribeToDocuments();
+    this.subscribeToSettings();
   }
 
   get specs() {
-    return specs;
+    return specs.schemas;
   }
 
   get latestVersion(): SpecVersions {
-    return Object.keys(specs).pop() as SpecVersions;
+    return  Object.keys(this.specs).pop() as SpecVersions;
   }
 
   getSpec(version: SpecVersions) {
-    return specs[String(version) as SpecVersions];
+    return this.specs[String(version) as SpecVersions];
   }
 
   private subcribeToDocuments() {
@@ -42,6 +44,12 @@ export class SpecificationService extends AbstractService {
     });
   }
 
+  private subscribeToSettings() {
+    settingsState.subscribe(() => {
+      sessionStorage.removeItem(this.keySessionStorage);
+    });
+  }
+
   private tryInformAboutLatestVersion(
     version: string,
   ): boolean {
@@ -49,7 +57,7 @@ export class SpecificationService extends AbstractService {
 
     const nowDate = new Date();
     let dateOfLastQuestion = nowDate;
-    const localStorageItem = sessionStorage.getItem('informed-about-latest');
+    const localStorageItem = sessionStorage.getItem(this.keySessionStorage);
     if (localStorageItem) {
       dateOfLastQuestion = new Date(localStorageItem);
     }
@@ -58,7 +66,7 @@ export class SpecificationService extends AbstractService {
       nowDate === dateOfLastQuestion ||
       nowDate.getTime() - dateOfLastQuestion.getTime() > oneDay;
     if (isOvertime && version !== this.latestVersion) {
-      sessionStorage.setItem('informed-about-latest', nowDate.toString());
+      sessionStorage.setItem(this.keySessionStorage, nowDate.toString());
       return true;
     }
 

@@ -1,19 +1,21 @@
 import SplitPane from './SplitPane';
 import { Editor } from './Editor/Editor';
 import { Navigation } from './Navigation';
+import { Navigationv3 } from './Navigationv3';
 import { Template } from './Template';
 import { VisualiserTemplate } from './Visualiser';
 
-import { debounce } from '../helpers';
-import { usePanelsState } from '../state';
+import { debounce } from '@/helpers';
+import { usePanelsState, useDocumentsState } from '@/state';
 
-import type { FunctionComponent } from 'react';
+import { FunctionComponent } from 'react';
 
 interface ContentProps {}
 
 export const Content: FunctionComponent<ContentProps> = () => { // eslint-disable-line sonarjs/cognitive-complexity
   const { show, secondaryPanelType } = usePanelsState();
-
+  const document = useDocumentsState(state => state.documents['asyncapi']?.document) || null;
+  const isV3 = document?.version() === '3.0.0';
   const navigationEnabled = show.primarySidebar;
   const editorEnabled = show.primaryPanel;
   const viewEnabled = show.secondaryPanel;
@@ -40,7 +42,9 @@ export const Content: FunctionComponent<ContentProps> = () => { // eslint-disabl
         localStorage.setItem(splitPosLeft, String(size));
       }, 100)}
     >
-      <Navigation />
+      {
+        isV3 ? <Navigationv3 /> : <Navigation />
+      }
       <Editor />
     </SplitPane>
   );

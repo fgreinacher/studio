@@ -1,15 +1,18 @@
 import { AbstractService } from './abstract.service';
 
-import { Parser, convertToOldAPI, DiagnosticSeverity } from '@asyncapi/parser/cjs';
+import { Parser, DiagnosticSeverity } from '@asyncapi/parser';
 import { OpenAPISchemaParser } from '@asyncapi/openapi-schema-parser';
 import { AvroSchemaParser } from '@asyncapi/avro-schema-parser';
+import { ProtoBuffSchemaParser } from '@asyncapi/protobuf-schema-parser';
 import { untilde } from '@asyncapi/parser/cjs/utils';
 
-import { isDeepEqual } from '../helpers';
-import { filesState, documentsState, settingsState } from '../state';
+import { isDeepEqual } from '@/helpers';
+import { filesState, documentsState, settingsState } from '@/state';
 
-import type { Diagnostic, ParseOptions } from '@asyncapi/parser/cjs';
-import type { DocumentDiagnostics } from '../state/documents.state';
+import type { Diagnostic, ParseOptions } from '@asyncapi/parser';
+import type { DocumentDiagnostics } from '@/state/documents.state';
+import type { SchemaParser } from '@asyncapi/parser';
+import { getLocationForJsonPath, parseWithPointers } from '@stoplight/yaml';
 
 export class ParserService extends AbstractService {
   private parser!: Parser;
@@ -17,8 +20,10 @@ export class ParserService extends AbstractService {
   override async onInit() {
     this.parser = new Parser({
       schemaParsers: [
-        OpenAPISchemaParser(),
-        AvroSchemaParser(),
+        // Temporary fix for TS error
+        OpenAPISchemaParser() as SchemaParser<unknown, unknown>,
+        AvroSchemaParser() as SchemaParser<unknown, unknown>,
+        ProtoBuffSchemaParser() as SchemaParser<unknown, unknown>,
       ],
       __unstable: {
         resolver: {
@@ -41,12 +46,10 @@ export class ParserService extends AbstractService {
     try {
       const { document, diagnostics: _diagnostics, extras } = await this.parser.parse(spec, options);
       diagnostics = _diagnostics;
-  
       if (document) {
-        const oldDocument = convertToOldAPI(document);
         this.updateDocument(uri, {
           uri,
-          document: oldDocument,
+          document,
           diagnostics: this.createDiagnostics(diagnostics),
           extras,
           valid: true,
@@ -69,14 +72,36 @@ export class ParserService extends AbstractService {
   getRangeForJsonPath(uri: string, jsonPath: string | Array<string | number>) {
     try {
       const { documents } = documentsState.getState();
+
       const extras = documents[String(uri)]?.extras;
+
       if (extras) {
         jsonPath = Array.isArray(jsonPath) ? jsonPath : jsonPath.split('/').map(untilde);
         if (jsonPath[0] === '') jsonPath.shift();
-        return extras.document.getRangeForJsonPath(jsonPath, true);
+
+        return extras.document.getRangeForJsonPath(jsonPath);
       }
-    } catch (err: any) {
-      return;
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  getRangeForYamlPath(uri: string, jsonPath: string | Array<string | number>) {
+    try {
+      const { documents } = documentsState.getState();
+
+      const extras = documents[String(uri)]?.extras;
+
+      if (extras) {
+        jsonPath = Array.isArray(jsonPath) ? jsonPath : jsonPath.split('/').map(untilde);
+        if (jsonPath[0] === '') jsonPath.shift();
+        const yamlDoc = parseWithPointers(this.svcs.editorSvc.value);
+
+        const location = getLocationForJsonPath(yamlDoc, jsonPath, true);
+        return location?.range || { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
+      }
+    } catch (err) {
+      console.error(err);
     }
   }
 

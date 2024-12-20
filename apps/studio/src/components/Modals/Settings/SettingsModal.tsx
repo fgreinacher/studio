@@ -7,10 +7,10 @@ import { SettingsTabs, SettingTab } from './SettingsTabs';
 import { ConfirmModal } from '../index';
 import { Switch } from '../../common';
 
-import { useServices } from '../../../services';
+import { useServices } from '@/services';
 
 import type { Dispatch, SetStateAction, FunctionComponent } from 'react';
-import type { SettingsState } from '../../../state/settings.state';
+import type { SettingsState } from '@/state/settings.state';
 
 interface ShowGovernanceOptionProps {
   label: 'warning' | 'information' | 'hint';
@@ -129,7 +129,7 @@ export const SettingsModal = create<SettingsModalProps>(({ activeTab = 'editor' 
               Save automatically after each change in the document or manually.
             </div>
           </div>
-          <div className={`flex flex-col mt-4 text-sm pl-8 ${autoSaving ? 'opacity-1' : 'opacity-25'}`}>
+          <div className="flex flex-col mt-4 text-sm">
             <div className="flex flex-row content-center justify-between">
               <label
                 htmlFor="settings-template-delay"

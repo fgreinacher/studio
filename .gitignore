@@ -6,3 +6,6 @@ build
 dist
 .turbo
 .env
+apps/design-system/src/styles/tailwind.output.css
+# Local Netlify folder for testing purposes
+.netlify

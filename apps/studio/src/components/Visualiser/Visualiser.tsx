@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FunctionComponent } from 'react';
 
 import { FlowDiagram } from './FlowDiagram';
 
-import { useDocumentsState, useSettingsState, useOtherState, otherState } from '../../state';
+import { useDocumentsState, useSettingsState, useOtherState, otherState } from '@/state';
 
-import type { OldAsyncAPIDocument as AsyncAPIDocument } from '@asyncapi/parser/cjs';
-import type { FunctionComponent } from 'react';
+import type { OldAsyncAPIDocument as AsyncAPIDocument } from '@asyncapi/parser';
+import { convertToOldAPI } from '@asyncapi/parser';
 
 interface VisualiserProps {}
 
@@ -17,13 +17,15 @@ export const Visualiser: FunctionComponent<VisualiserProps> = () => {
 
   useEffect(() => {
     if (autoRendering || parsedSpec === null) {
-      setParsedSpec(document);
+      const oldDocument = document !== null ? convertToOldAPI(document) : null;
+      setParsedSpec(oldDocument);
     }
   }, [document]); // eslint-disable-line
 
   useEffect(() => {
     if (templateRerender) {
-      setParsedSpec(document);
+      const oldDocument = document !== null ? convertToOldAPI(document) : null;
+      setParsedSpec(oldDocument);
       otherState.setState({ templateRerender: false });
     }
   }, [templateRerender]); // eslint-disable-line
