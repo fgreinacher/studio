@@ -14,9 +14,11 @@
     "release": {
       "dependsOn": ["build"]
     },
-    "test": {},
-    "bump:version": {
-      "cache": false
-    }
+    "test": {
+      "dependsOn": ["lint", "generate:assets"]
+    },
+    "clean": {},
+    "lint": {},
+    "generate:assets": {}
   }
 }

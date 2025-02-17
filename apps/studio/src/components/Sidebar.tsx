@@ -1,13 +1,14 @@
-import { VscListSelection, VscCode, VscOpenPreview, VscGraph, VscNewFile, VscSettingsGear } from 'react-icons/vsc';
+import { VscListSelection, VscCode, VscOpenPreview, VscGraph, VscNewFile, VscSettingsGear, VscPlayCircle } from 'react-icons/vsc';
 import { show as showModal } from '@ebay/nice-modal-react';
 
 import { Tooltip } from './common';
-import { SettingsModal, NewFileModal } from './Modals';
+import { SettingsModal, ConfirmNewFileModal } from './Modals';
 
-import { usePanelsState, panelsState } from '../state';
+import { usePanelsState, panelsState, useDocumentsState } from '@/state';
 
-import type { FunctionComponent, ReactNode } from 'react';
-import type { PanelsState } from '../state/panels.state';
+import { useEffect, useState, type FunctionComponent, type ReactNode } from 'react';
+import type { PanelsState } from '@/state/panels.state';
+import { driverObj } from '@/helpers/driver';
 
 function updateState(panelName: keyof PanelsState['show'], type?: PanelsState['secondaryPanelType']) {
   const settingsState = panelsState.getState();
@@ -45,17 +46,22 @@ interface NavItem {
   onClick: () => void;
   icon: ReactNode;
   tooltip: ReactNode;
+  enabled: boolean;
+  dataTest: string;
 }
 
 interface SidebarProps {}
 
 export const Sidebar: FunctionComponent<SidebarProps> = () => {
   const { show, secondaryPanelType } = usePanelsState();
-  if (show.activityBar === false) {
-    return null;
-  }
+  const [document, hasErrors] = useDocumentsState((state) => [
+    state.documents['asyncapi']?.document,
+    state.documents['asyncapi']?.diagnostics?.errors.length > 0,
+  ]) || [null, false];
 
-  const navigation: NavItem[] = [
+  const [isV3, setIsV3] = useState(document?.version().startsWith('3.'));
+
+  let navigation: NavItem[] = [
     // navigation
     {
       name: 'primarySidebar',
@@ -64,6 +70,8 @@ export const Sidebar: FunctionComponent<SidebarProps> = () => {
       onClick: () => updateState('primarySidebar'),
       icon: <VscListSelection className="w-5 h-5" />,
       tooltip: 'Navigation',
+      enabled: true,
+      dataTest: 'button-navigation',
     },
     // editor
     {
@@ -73,46 +81,72 @@ export const Sidebar: FunctionComponent<SidebarProps> = () => {
       onClick: () => updateState('primaryPanel'),
       icon: <VscCode className="w-5 h-5" />,
       tooltip: 'Editor',
+      enabled: true,
+      dataTest: 'button-editor',
     },
     // template
     {
       name: 'template',
-      title: 'Template',
+      title: 'Template preview',
       isActive: show.secondaryPanel && secondaryPanelType === 'template',
       onClick: () => updateState('secondaryPanel', 'template'),
       icon: <VscOpenPreview className="w-5 h-5" />,
-      tooltip: 'HTML preview',
+      tooltip: 'Template preview',
+      enabled: true,
+      dataTest: 'button-template-preview',
     },
     // visuliser
     {
       name: 'visualiser',
-      title: 'Visualiser',
+      title: 'Blocks visualiser',
       isActive: show.secondaryPanel && secondaryPanelType === 'visualiser',
       onClick: () => updateState('secondaryPanel', 'visualiser'),
       icon: <VscGraph className="w-5 h-5" />,
       tooltip: 'Blocks visualiser',
+      enabled: !isV3,
+      dataTest: 'button-blocks-visualiser',
     },
     // newFile
     {
       name: 'newFile',
       title: 'New file',
       isActive: false,
-      onClick: () => showModal(NewFileModal),
+      onClick: () => showModal(ConfirmNewFileModal),
       icon: <VscNewFile className="w-5 h-5" />,
       tooltip: 'New file',
+      enabled: true,
+      dataTest: 'button-new-file',
     },
   ];
 
+  navigation = navigation.filter(item => item.enabled);
+
+  const driverTourHandler = () => {
+    const getCurrentTourStep = localStorage.getItem('currentTourStep');
+    driverObj.drive(parseInt(getCurrentTourStep ?? '0', 10));
+  };
+
+  useEffect(() => {
+    // if the document has no errors then only update the setIsV3 variable
+    if (!hasErrors) {
+      setIsV3(document?.version().startsWith('3.'));
+    }
+  }, [document]);
+
+  if (show.activityBar === false) {
+    return null;
+  }
+  
   return (
-    <div className="flex flex-col bg-gray-800 shadow-lg border-r border-gray-700 justify-between">
+    <div className="flex flex-col bg-gray-800 shadow-lg border-r border-gray-700 justify-between" id="sidebar">
       <div className="flex flex-col">
         {navigation.map(item => (
           <Tooltip content={item.tooltip} placement='right' hideOnClick={true} key={item.name}>
             <button
-              title={item.title}
               onClick={() => item.onClick()}
               className={'flex text-sm focus:outline-none border-box p-2'}
               type="button"
+              data-test={item.dataTest}
             >
               <div className={item.isActive ? 'bg-gray-600 p-2 rounded text-white' : 'p-2 text-gray-500 hover:text-white'}>
                 {item.icon}
@@ -122,14 +156,25 @@ export const Sidebar: FunctionComponent<SidebarProps> = () => {
         ))}
       </div>
       <div className="flex flex-col">
+        <Tooltip content='Start Tour' placement='right' hideOnClick={true}>
+          <button
+            title="Start Tour"  
+            className='flex text-gray-500 hover:text-white focus:outline-none border-box p-4'
+            type="button"  
+            onClick={driverTourHandler}
+          >
+            <VscPlayCircle className="w-6 h-6" />
+          </button>
+        </Tooltip>
         <Tooltip content='Studio settings' placement='right' hideOnClick={true}>
           <button
-            title="Studio settings"  
             className='flex text-gray-500 hover:text-white focus:outline-none border-box p-4'
             type="button"  
             onClick={() => showModal(SettingsModal)}
+            id="studio-setting"
+            data-test="button-settings"
           >
-            <VscSettingsGear className="w-5 h-5" />
+            <VscSettingsGear className="w-5 h-5"  />
           </button>
         </Tooltip>
       </div>

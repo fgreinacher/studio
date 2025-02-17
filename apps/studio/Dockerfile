@@ -3,7 +3,7 @@ ARG BASE_URL_PLACEHOLDER=189b303e-37a0-4f6f-8c0a-50333bc3c36e
 
 
 FROM node:18-alpine AS base
- 
+
 FROM base AS builder
 RUN apk add --no-cache libc6-compat
 RUN apk update
@@ -15,6 +15,9 @@ RUN turbo prune --scope=@asyncapi/studio --docker
  
 # Add lockfile and package.json's of isolated subworkspace
 FROM base AS installer
+
+ARG BASE_URL_PLACEHOLDER
+
 RUN apk add --no-cache libc6-compat
 RUN apk update
 WORKDIR /app
@@ -24,14 +27,14 @@ WORKDIR /app
 COPY .gitignore .gitignore
 COPY --from=builder /app/out/json/ .
 COPY --from=builder /app/out/package-lock.json ./package-lock.json
-RUN npm ci
+RUN PUPPETEER_SKIP_DOWNLOAD=true npm ci
  
 # Build the project
 COPY --from=builder /app/out/full/ .
 RUN PUBLIC_URL=${BASE_URL_PLACEHOLDER} npm run build:studio
  
 
-FROM docker.io/library/nginx:1.21.5-alpine as runtime
+FROM docker.io/library/nginx:1.25.5-alpine as runtime
 
 ARG BASE_URL_PLACEHOLDER
 # The base Nginx image automatically executes all shell scripts 

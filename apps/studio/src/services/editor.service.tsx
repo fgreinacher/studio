@@ -1,17 +1,17 @@
 import { AbstractService } from './abstract.service';
 
 import { KeyMod, KeyCode } from 'monaco-editor/esm/vs/editor/editor.api';
-import { DiagnosticSeverity } from '@asyncapi/parser/cjs';
+import { DiagnosticSeverity } from '@asyncapi/parser';
 import { Range, MarkerSeverity } from 'monaco-editor/esm/vs/editor/editor.api';
 import toast from 'react-hot-toast';
 import fileDownload from 'js-file-download';
 
-import { appState, documentsState, filesState, settingsState } from '../state';
+import { appState, documentsState, filesState, settingsState } from '@/state';
 
 import type * as monacoAPI from 'monaco-editor/esm/vs/editor/editor.api';
-import type { Diagnostic } from '@asyncapi/parser/cjs';
-import type { ConvertVersion } from '@asyncapi/converter';
-import type { File } from '../state/files.state';
+import type { Diagnostic } from '@asyncapi/parser';
+import type { AsyncAPIConvertVersion } from '@asyncapi/converter';
+import type { File } from '@/state/files.state';
 
 export interface UpdateState {
   content: string;
@@ -97,8 +97,8 @@ export class EditorService extends AbstractService {
     });
   }
 
-  async convertSpec(version?: ConvertVersion | string) {
-    const converted = await this.svcs.converterSvc.convert(this.value, version as ConvertVersion);
+  async convertSpec(version?: AsyncAPIConvertVersion | string) {
+    const converted = await this.svcs.converterSvc.convert(this.value, version as AsyncAPIConvertVersion);
     this.updateState({ content: converted, updateModel: true });
   }
 
@@ -131,6 +131,15 @@ export class EditorService extends AbstractService {
     if (!file) {
       return;
     }
+    
+    // Check if file is valid (only JSON and YAML are allowed currently) ----Change afterwards as per the requirement
+    if (
+      file.type !== 'application/json' &&
+      file.type !== 'application/x-yaml' &&
+      file.type !== 'application/yaml'
+    ) {
+      throw new Error('Invalid file type');
+    }
 
     const fileReader = new FileReader();
     fileReader.onload = fileLoadedEvent => {
@@ -151,6 +160,55 @@ export class EditorService extends AbstractService {
           source: undefined, 
         },
       });
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  }
+
+  async importFromShareID(shareID: string) {
+    try {
+      const response = await fetch(`/share/${shareID}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch shared document');
+      }
+
+      const data = await response.json();
+      this.updateState({ 
+        content: data.content, 
+        updateModel: true, 
+        file: { 
+          from: 'share', 
+          source: undefined, 
+        },
+      });
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  }
+
+  async exportAsURL() {
+    try {
+      const file = filesState.getState().files['asyncapi'];
+      const shareID = await fetch('/share', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: file.content }),
+      }).then(res => res.text());
+      return `${window.location.origin}/?share=${shareID}`;
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  }
+
+  async exportAsBase64() {
+    try {
+      const file = filesState.getState().files['asyncapi'];
+      return this.svcs.formatSvc.encodeBase64(file.content);
     } catch (err) {
       console.error(err);
       throw err;

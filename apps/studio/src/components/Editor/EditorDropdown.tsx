@@ -8,17 +8,20 @@ import {
   ImportBase64Modal,
   GeneratorModal,
   ConvertModal,
+  ImportUUIDModal,
 } from '../Modals';
 import { Dropdown } from '../common';
 
-import { useServices } from '../../services';
+import { useServices } from '@/services';
 import { useDocumentsState, useFilesState } from '../../state';
 
 interface EditorDropdownProps {}
 
 export const EditorDropdown: React.FunctionComponent<EditorDropdownProps> = () => {
   const { editorSvc } = useServices();
-  const isInvalidDocument = !useDocumentsState(state => state.documents['asyncapi'].valid);
+  const isInvalidDocument = !useDocumentsState(state => {
+    return state.documents['asyncapi'].valid
+  });
   const language = useFilesState(state => state.files['asyncapi'].language);
 
   const importUrlButton = (
@@ -32,6 +35,17 @@ export const EditorDropdown: React.FunctionComponent<EditorDropdownProps> = () =
     </button>
   );
 
+  const importShareIdButton = (
+    <button
+      type="button"
+      className="px-4 py-1 w-full text-left text-sm rounded-md focus:outline-none transition ease-in-out duration-150"
+      title="Import from UUID"
+      onClick={() => show(ImportUUIDModal)}
+    >
+      Import from UUID
+    </button>
+  );
+
   const importFileButton = (
     <label
       className="block px-4 py-1 w-full text-left text-sm rounded-md focus:outline-none transition ease-in-out duration-150 cursor-pointer"
@@ -39,6 +53,7 @@ export const EditorDropdown: React.FunctionComponent<EditorDropdownProps> = () =
     >
       <input
         type="file"
+        accept='.yaml, .yml, .json'
         style={{ position: 'fixed', top: '-100em' }}
         onChange={event => {
           toast.promise(editorSvc.importFile(event.target.files), {
@@ -53,7 +68,7 @@ export const EditorDropdown: React.FunctionComponent<EditorDropdownProps> = () =
             error: (
               <div>
                 <span className="block text-bold text-red-400">
-                Failed to import document.
+                Failed to import document. Maybe the file type is invalid.
                 </span>
               </div>
             ),
@@ -205,6 +220,31 @@ export const EditorDropdown: React.FunctionComponent<EditorDropdownProps> = () =
     </button>
   );
 
+  const shareButtonBase64 = (
+    <button 
+      type="button"
+      className="px-4 py-1 w-full text-left text-sm rounded-md focus:outline-none transition ease-in-out duration-150 disabled:cursor-not-allowed"
+      title='Share as Base64'
+      onClick={() => {
+        toast.promise(
+          (async function () {
+            const base64 = await editorSvc.exportAsBase64();
+            const url = `${window.location.origin}/?base64=${encodeURIComponent(
+              base64
+            )}`;
+            await navigator.clipboard.writeText(url);
+          }()),
+          {
+            loading: 'Copying URL to clipboard...',
+            success: 'URL copied to clipboard!',
+            error: 'Failed to copy URL to clipboard.',
+          }
+        );
+      }}>
+      Share as Base64
+    </button>
+  );
+
   return (
     <Dropdown
       opener={<FaEllipsisH />}
@@ -221,10 +261,18 @@ export const EditorDropdown: React.FunctionComponent<EditorDropdownProps> = () =
           <li className="hover:bg-gray-900">
             {importBase64Button}
           </li>
+          <li className="hover:bg-gray-900">
+            {importShareIdButton}
+          </li>
         </div>
         <div className="border-b border-gray-700">
           <li className="hover:bg-gray-900">
             {generateButton}
+          </li>
+        </div>
+        <div className="border-b border-gray-700">
+          <li className="hover:bg-gray-900">
+            {shareButtonBase64}
           </li>
         </div>
         <div className="border-b border-gray-700">

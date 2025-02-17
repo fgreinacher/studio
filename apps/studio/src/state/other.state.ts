@@ -1,4 +1,4 @@
-import create from 'zustand';
+import { create } from 'zustand';
 
 export type OtherState = {
   editorHeight: string;
@@ -6,7 +6,7 @@ export type OtherState = {
 }
 
 export const otherState = create<OtherState>(() => ({
-  editorHeight: 'calc(100% - 36px)',
+  editorHeight: 'calc(100% - 161px)',
   templateRerender: false,
 }));
 

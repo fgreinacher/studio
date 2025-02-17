@@ -1,9 +1,15 @@
-import { OperationIcon } from 'ui';
+import { OperationIcon } from '@asyncapi/studio-ui';
 
-export default {
-    component: OperationIcon,
+const meta = {
+  component: OperationIcon,
+  parameters: {
+      backgrounds: {
+        default: 'dark'
+      }
+  }
 };
 
-export const WithReplyIcon = () => <OperationIcon operation="reply" className="w-7 h-7" />;
-export const ReceiveIcon = () => <OperationIcon operation="receive" className="w-7 h-7" />;
-export const SendIcon = () => <OperationIcon operation="send" className="w-7 h-7" />;
+export default meta;
+export const WithReplyIcon = () => <OperationIcon operation="reply" />;
+export const ReceiveIcon = () => <OperationIcon operation="receive" />;
+export const SendIcon = () => <OperationIcon operation="send" />;

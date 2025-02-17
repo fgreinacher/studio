@@ -3,7 +3,7 @@ import { JSONSchema7 } from 'json-schema';
 
 import { Switch } from '../../common';
 
-import { useDocumentsState } from '../../../state';
+import { useDocumentsState } from '@/state';
 
 import type { FunctionComponent, ForwardRefRenderFunction, PropsWithChildren, Dispatch, SetStateAction } from 'react';
 
@@ -106,7 +106,7 @@ export const TemplateParametersSans: ForwardRefRenderFunction<TemplateParameters
     const servers = document?.servers();
     const availableServers: string[] = [];
     Object.entries(servers || {}).forEach(([serverName, server]) => {
-      if (supportedProtocols.includes(server.protocol())) availableServers.push(serverName);
+      if (server.protocol && supportedProtocols.includes(server.protocol())) availableServers.push(serverName);
     });
 
     if (supportedProtocols.length && availableServers.length === 0) {
